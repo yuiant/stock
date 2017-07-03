@@ -35,4 +35,11 @@ indexcount <- c(1,6,7,8,12,4,12,11,16,14,31,3,2,3)
 ind0 <- c(1,(cumsum(indexcount)+1)[-length(indexcount)])
 ind1 <- cumsum(indexcount)
 
+namejson <- fromJSON(file = "id2token.json")
+
+
+
+
+
+
 
