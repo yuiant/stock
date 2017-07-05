@@ -19,6 +19,7 @@ namejson <- fromJSON(file = "id2token.json")
 mc_ind <- read.csv("macro_indicator.csv",fileEncoding = "utf-8")
 col2rid <- read.csv("col2rid.csv",header = F)
 
+### plot na status of the table
 xa <- rep(1:130,809)
 ya <- sort(rep(1:809,130))
 hm <- data.frame(xa,ya)
@@ -26,8 +27,20 @@ hm$status <- as.integer(is.na(apply(hm,1,FUN = function(x){is.na(mc_ind[810-x[2]
 txt <- paste(mc_ind$date[810-hm$ya],unlist(namejson)[hm$xa],sep = ":")
 hm$txt <- txt
 
+indexcount <- c(1,6,7,8,12,4,12,11,16,14,31,3,2,3)
+ind0 <- c(1,(cumsum(indexcount)+1)[-length(indexcount)])
+ind1 <- cumsum(indexcount)
+inds <- cbind(ind0,ind1)
+inds <- inds+2
 
+## subset 
+mc_ind$date <-as.character(mc_ind$date)
+submc <- filter(mc_ind,date >= "1992-01-01" & date <= "2016-11-01")
+submc$date <- as.POSIXct(submc$date)
 
+dname <- do.call(rbind,strsplit(unlist(namejson),split = "-"))
+
+d2nameindex <- unique(paste(dname[,1],dname[,2],sep = "-"))
 ```
 
 
@@ -36,20 +49,25 @@ hm$txt <- txt
 
 ```{r eruptions, echo=FALSE}
 inputPanel(
-  selectInput("select_ind", label = "Number of bins:",
-              choices = unlist(), selected = 20),
+  selectInput("select_inds2", label = "select inds2",
+              choices = d2nameindex, selected = 1)
   
-  sliderInput("bw_adjust", label = "Bandwidth adjustment:",
-              min = 0.2, max = 2, value = 1, step = 0.2)
+ 
 )
 
-renderPlot({
-  hist(faithful$eruptions, probability = TRUE, breaks = as.numeric(input$n_breaks),
-       xlab = "Duration (minutes)", main = "Geyser eruption duration")
-  
-  dens <- density(faithful$eruptions, adjust = input$bw_adjust)
-  lines(dens, col = "blue")
-})
+
+
+selectind <- which(d2nameindex == input$select_inds2,arr.ind = T)
+selectmcind <- submc[,c(1:2,inds[selectind,1]:inds[selectind,2])]
+p <- plot_ly(data = selectmcind,x = ~date)
+for(i in 3:dim(selectmcind)[2]){
+  p %>% add_trace(data = selectmcind,y = selectmcind[,i])
+}
+
+renderPlotly(p)
+
+
+
 ```
 
 

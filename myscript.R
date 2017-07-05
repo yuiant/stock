@@ -44,4 +44,3 @@ cname <- apply(cm,2,FUN = function(x){paste(myname[x[1]],myname[x[2]],sep = "#")
 cdf <- data.frame(cor = a, name = cname)
 
 write.table(cdf,"cdf.csv",sep = ",",fileEncoding = "utf-8")
-
