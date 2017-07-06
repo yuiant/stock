@@ -1,17 +1,18 @@
 ---
-title: "stock periods"
-author: "yuiant"
+title: "股票时段-宏观经济指标分析"
+# author: "yuiant"
 output: html_document
 runtime: shiny
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE,message = FALSE,warning = FALSE)
+library(plyr)
 library(dplyr)
 library(tidyr)
 library(rjson)
 library(plotly)
-
+library(DT)
 namejson <- fromJSON(file = "id2token.json")
 
 
@@ -43,33 +44,132 @@ dname <- do.call(rbind,strsplit(unlist(namejson),split = "-"))
 d2nameindex <- unique(paste(dname[,1],dname[,2],sep = "-"))
 ```
 
+## overview
 
-## plot the macro_indicator
+```{r echo= FALSE}
+s1 <- read.csv("000001.SS.csv")
+s1$Date <- as.character(s1$Date)
+spm <- read.csv("stock_period_modified.csv",sep = "#",na.strings = "NA")
+names(spm)[1] <- "Date"
+spm$Date <- as.character(spm$Date)
 
+spm1 <- plyr::join(x = s1,y = spm,by = "Date")
+spm1$Date <- as.POSIXct(spm1$Date)
+spm1 <- spm1[(spm1$period0 > -1)&!is.na(spm1$period1),]
 
-```{r eruptions, echo=FALSE}
-inputPanel(
-  selectInput("select_inds2", label = "select inds2",
-              choices = d2nameindex, selected = 1)
-  
- 
-)
+spm1$Adj.Close <- as.numeric(as.character(spm1$Adj.Close))
 
-
-
-selectind <- which(d2nameindex == input$select_inds2,arr.ind = T)
-selectmcind <- submc[,c(1:2,inds[selectind,1]:inds[selectind,2])]
-p <- plot_ly(data = selectmcind,x = ~date)
-for(i in 3:dim(selectmcind)[2]){
-  p %>% add_trace(data = selectmcind,y = selectmcind[,i])
-}
-
-renderPlotly(p)
+checkboxInput(inputId = "checkbox0",label = "震荡期")
 
 
+
+
+selectp0 <- reactive({
+  if(input$checkbox0 == F){
+    p <- plot_ly(data = spm1,x =~Date,y = ~Adj.Close,color =c("bad","good")[spm1$period1+1],colors = c("green","red"),text = ~remark)
+  }
+  else{
+   p <- plot_ly(data = spm1,x =~Date,y = ~Adj.Close,color =c("bad","good","unknown")[spm1$period0+1],colors = c("green","red","yellow"),text = ~remark)
+  }
+})
+
+renderPlotly({selectp0()})
 
 ```
 
+
+
+
+## 相关性分析
+### 指标时序图
+同一类内部的指标呈高度相关
+
+```{r eruptions, echo=FALSE}
+
+  selectInput("select_inds2", label = "选择指标类别",
+              choices = d2nameindex, selected = 1,width = "40%")
+  
+ 
+
+
+
+selectp1 <- reactive({
+  selectind <- which(d2nameindex == input$select_inds2,arr.ind = T)
+selectmcind <- submc[,c(1:2,inds[selectind,1]:inds[selectind,2])]
+p <- plot_ly(data = selectmcind,x = ~date)
+for(i in 3:dim(selectmcind)[2]){
+ p <- p %>% add_trace(y = selectmcind[,i],name = dname[(inds-2)[selectind,1]:(inds-2)[selectind,2],3][i-2])
+}
+p
+})
+
+renderPlotly({selectp1()})
+
+```
+
+
+不同类指标的相关性（绝对值）达90%以上的项
+```{r echo= FALSE}
+coln <- dim(submc)[2]-2
+cm0 <- combn(coln,2)
+cm1 <- do.call(cbind,apply((inds-2),1,FUN = function(x){
+  if(x[1]<x[2]){
+    combn(x[1]:x[2],2)
+  }
+  else{
+    NULL
+  }
+  }))
+cm <- t(as.matrix(dplyr::setdiff(as.data.frame(t(cm0)),as.data.frame(t(cm1)))))
+corvalue <- apply((cm+2),2,FUN = function(x){cor(submc[,x[1]],submc[,x[2]],use = "pairwise.complete.obs")})
+#myname <- paste(names(submc)[3:132],unlist(namejson),sep = ":")
+myname <- unlist(namejson)
+cname <- apply(cm,2,FUN = function(x){paste(myname[x[1]],myname[x[2]],sep = "vs")})
+cdf <- data.frame(cor = corvalue, name = cname,id1 = cm[1,],id2 = cm[2,])
+
+
+cdf90 <- filter(cdf,abs(cor) >= 0.9)
+cdf90 <- cdf90[order(cdf90$cor,decreasing = T),]
+
+Normalize <- function(x,b){
+  if(b == TRUE){
+    (x-min(x))/(max(x)-min(x))
+  }
+  else{
+    x
+  }
+}
+
+
+
+## ui plot
+
+DT::datatable(cdf90[,1:2],rownames = F)
+
+
+
+  selectInput("selectvsind", label = "选择指标",
+              choices = cdf90$name, selected = 1,width = "100%")
+
+
+selectp2 <- reactive({
+  selectind1 <- which(cdf90$name == input$selectvsind,arr.ind = T)
+  tracename <- unlist(strsplit(input$selectvsind,split = "vs"))
+  p <- plot_ly(data = submc,x = ~date) %>% 
+    add_trace(y = submc[,cdf90$id1[selectind1]],name = tracename[1]) %>%
+    add_trace(y = submc[,cdf90$id2[selectind1]],name = tracename[2]) %>%
+    layout(title = paste("cor_value",cdf90$cor[selectind1],sep = ":"))
+})
+
+
+renderPlotly(selectp2())
+
+```
+
+### PCA
+```{r echo=FALSE}
+
+```
 
 
 
