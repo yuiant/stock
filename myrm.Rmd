@@ -114,7 +114,7 @@ cm1 <- do.call(cbind,apply((inds-2),1,FUN = function(x){
   }
   }))
 cm <- t(as.matrix(dplyr::setdiff(as.data.frame(t(cm0)),as.data.frame(t(cm1)))))
-corvalue <- apply((cm+2),2,FUN = function(x){cor(submc[,x[1]],submc[,x[2]],use = "pairwise.complete.obs")})
+corvalue <- apply((cm+2),2,FUN = function(x){cor(submc[,x[1]],submc[,x[2]],use = "na.or.complete")})
 #myname <- paste(names(submc)[3:132],unlist(namejson),sep = ":")
 myname <- unlist(namejson)
 cname <- apply(cm,2,FUN = function(x){paste(myname[x[1]],myname[x[2]],sep = "vs")})
@@ -160,10 +160,17 @@ renderPlotly(selectp2())
 
 ```
 
-### PCA分析
-```{r echo=FALSE}
+### 缺失值补全
+- done:线性回归
 
-```
+### PCA主成分分析
+- to do
+
+### 股票时段-宏观经济数据分类器
+- to do
+
+### 分析股票时段切换的前兆信号
+- to do
 
 
 
