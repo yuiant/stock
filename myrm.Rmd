@@ -17,7 +17,7 @@ namejson <- fromJSON(file = "id2token.json")
 
 
 ##initialize
-mc_ind <- read.csv("macro_indicator.csv",fileEncoding = "utf-8")
+mc_ind <- read.csv("macro_indicator_new.csv",fileEncoding = "utf-8")
 col2rid <- read.csv("col2rid.csv",header = F)
 
 ### plot na status of the table
@@ -114,7 +114,7 @@ cm1 <- do.call(cbind,apply((inds-2),1,FUN = function(x){
   }
   }))
 cm <- t(as.matrix(dplyr::setdiff(as.data.frame(t(cm0)),as.data.frame(t(cm1)))))
-corvalue <- apply((cm+2),2,FUN = function(x){cor(submc[,x[1]],submc[,x[2]],use = "na.or.complete")})
+corvalue <- apply((cm+2),2,FUN = function(x){cor(submc[,x[1]],submc[,x[2]],use = "pairwise.complete.obs")})
 #myname <- paste(names(submc)[3:132],unlist(namejson),sep = ":")
 myname <- unlist(namejson)
 cname <- apply(cm,2,FUN = function(x){paste(myname[x[1]],myname[x[2]],sep = "vs")})
@@ -147,12 +147,12 @@ DT::datatable(cdf905[,1:2],rownames = F)
 
 
 selectp2 <- reactive({
-  selectind1 <- which(cdf90$name == input$selectvsind,arr.ind = T)
+  selectind1 <- which(cdf905$name == input$selectvsind,arr.ind = T)
   tracename <- unlist(strsplit(input$selectvsind,split = "vs"))
   p <- plot_ly(data = submc,x = ~date) %>% 
-    add_trace(y = submc[,cdf90$id1[selectind1]],name = tracename[1]) %>%
-    add_trace(y = submc[,cdf90$id2[selectind1]],name = tracename[2]) %>%
-    layout(title = paste("cor_value",cdf90$cor[selectind1],sep = ":"))
+    add_trace(y = submc[,cdf905$id1[selectind1]+2],name = tracename[1]) %>%
+    add_trace(y = submc[,cdf905$id2[selectind1]+2],name = tracename[2]) %>%
+    layout(title = paste("cor_value",cdf905$cor[selectind1],sep = ":"))
 })
 
 
