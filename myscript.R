@@ -44,3 +44,42 @@ cname <- apply(cm,2,FUN = function(x){paste(myname[x[1]],myname[x[2]],sep = "#")
 cdf <- data.frame(cor = a, name = cname)
 
 write.table(cdf,"cdf.csv",sep = ",",fileEncoding = "utf-8")
+
+
+namejson1 <- fromJSON(file = "id2token (copy).json")
+indexcount1 <- unlist(lapply(namejson1,FUN = length))
+ind0 <- c(1,(cumsum(indexcount)+1)[-length(indexcount)])
+ind1 <- cumsum(indexcount)
+inds <- cbind(ind0,ind1)
+
+
+namenest <- function(mydf,rootname){
+  colnum <- ncol(mydf)
+  root <- list(name = rootname,children = NULL)
+}
+
+namenest <- function(root){
+  children <- root$children
+  if(!is.null(children)){
+    sp <- split(children,f = children[,1])
+    root$children <- lapply(sp,FUN = function(mysp){
+      newchild <- NULL
+      if(!is.null(dim(mysp))){
+        newchild <- mysp[,-1]
+      }
+      mychildren <- list(name = unique(mysp[,1]),children = newchild)
+      namenest(mychildren)
+      return(mychildren)
+    })
+  }
+ 
+  return(root)
+}
+
+
+
+
+
+
+
+
