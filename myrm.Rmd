@@ -17,7 +17,7 @@ namejson <- fromJSON(file = "id2token.json")
 
 
 ##initialize
-mc_ind <- read.csv("macro_indicator.csv",fileEncoding = "utf-8")
+mc_ind <- read.csv("macro_indicator_new.csv",fileEncoding = "utf-8")
 col2rid <- read.csv("col2rid.csv",header = F)
 
 ### plot na status of the table
