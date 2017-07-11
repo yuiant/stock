@@ -62,17 +62,16 @@ namenest <- function(root){
   children <- root$children
   if(!is.null(children)){
     sp <- split(children,f = children[,1])
+    names(sp) <- NULL
     root$children <- lapply(sp,FUN = function(mysp){
       newchild <- NULL
-      if(!is.null(dim(mysp))){
-        newchild <- mysp[,-1]
+      if(length(mysp) > 1){
+        newchild <- data.frame(mysp[,-1],stringsAsFactors = F)
       }
       mychildren <- list(name = unique(mysp[,1]),children = newchild)
       namenest(mychildren)
-      return(mychildren)
     })
   }
- 
   return(root)
 }
 
