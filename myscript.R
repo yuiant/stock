@@ -60,10 +60,14 @@ namenest <- function(mydf,rootname){
 
 namenest <- function(root){
   children <- root$children
-  if(length(children) > 0){
+  if(!is.null(children)){
     sp <- split(children,f = children[,1])
     root$children <- lapply(sp,FUN = function(mysp){
-      mychildren <- list(name = unique(mysp[,1]),children = mysp[,-1])
+      newchild <- NULL
+      if(!is.null(dim(mysp))){
+        newchild <- mysp[,-1]
+      }
+      mychildren <- list(name = unique(mysp[,1]),children = newchild)
       namenest(mychildren)
       return(mychildren)
     })
