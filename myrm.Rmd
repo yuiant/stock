@@ -13,6 +13,39 @@ library(tidyr)
 library(rjson)
 library(plotly)
 library(DT)
+library(networkD3)
+
+
+########## Helper.R
+namenest <- function(root){
+  children <- root$children
+  if(!is.null(children)){
+    sp <- split(children,f = children[,1])
+    names(sp) <- NULL
+    root$children <- lapply(sp,FUN = function(mysp){
+      newchild <- NULL
+      if(length(mysp) > 1){
+        newchild <- data.frame(mysp[,-1],stringsAsFactors = F)
+      }
+      mychildren <- list(name = unique(mysp[,1]),children = newchild)
+      namenest(mychildren)
+    })
+  }
+  return(root)
+}
+
+
+
+
+###########
+
+
+
+
+
+
+
+
 namejson <- fromJSON(file = "id2token.json")
 
 
@@ -44,7 +77,8 @@ dname <- do.call(rbind,strsplit(unlist(namejson),split = "-"))
 d2nameindex <- unique(paste(dname[,1],dname[,2],sep = "-"))
 ```
 
-## 股票时段划分概览（上证）
+## 1. 概览
+### 1.1 股票时段划分（上证）
 
 ```{r echo= FALSE}
 s1 <- read.csv("000001.SS.csv")
@@ -77,9 +111,20 @@ renderPlotly({selectp0()})
 
 
 
+### 1.2 宏观经济指标概览
+```{r echo= FALSE,warning=FALSE,message=FALSE}
 
-## 相关性分析
-### 同类指标时序图
+namedf <- data.frame(namevector = unlist(namejson),stringsAsFactors = FALSE)
+namedf1 <- tidyr::separate(namedf,namevector,paste("c",1:3,sep = ""),sep = "-")
+myroot <- list(name = "宏观经济指标",children = namedf1)
+
+diagonalNetwork(namenest(myroot),width = 1000,height = 2500,opacity = 0.9,fontSize = 16)
+
+```
+
+
+## 2. 特征工程
+### 2.1 同类指标时序图
 #### 同一类内部的多数指标呈高度正相关
 
 ```{r eruptions, echo=FALSE}
@@ -101,7 +146,18 @@ renderPlotly({selectp1()})
 
 ```
 
-#### 不同类指标的相关性（绝对值）达90%以上的项
+#### Q&A
+- 为何1993-1994年CPI那么高？
+A:92年邓小平南巡讲话，掀起投资热。银行监管力度欠缺，坏账率高。导致市场积累大量货币，引起高通胀。海南房产泡沫，苏三山事件等。
+朱镕基要把钱收回来，存款利率和贷款利率一度拉高。
+------------
+- 为何cpi有周期性,从1999年开始大概3年为一个周期?
+A:unknown
+
+
+
+
+### 2.2 不同类指标的相关性（绝对值）达90%以上的项
 ```{r echo= FALSE}
 coln <- dim(submc)[2]-2
 cm0 <- combn(coln,2)
@@ -160,17 +216,48 @@ renderPlotly(selectp2())
 
 ```
 
-### 缺失值补全
+### 2.3. 缺失值补全
 - done:线性回归
 
-### PCA主成分分析
-- to do
 
-### 股票时段-宏观经济数据分类器
-- to do
+### 2.4 指标确定
+- 剔除冗余指标
+- 剔除缺失值太多（>40%）
 
-### 分析股票时段切换的前兆信号
-- to do
+#### 剩余指标概览：
+
+```{r echo=FALSE}
+namejson1 <- fromJSON(file = "id2token (copy).json")
+# mf_ind <- read.csv("macro_indicator_filled1.csv",check.names = F)
+# mfname <- names(mf_ind)[-1]
+# mfind <- which(mfname %in% names(unlist(namejson1)))
+#newnameIndex <- which(names(unlist(namejson)) %in% mfname[mfind],arr.ind = T)
+newnameIndex <- which(unlist(namejson) %in% unlist(namejson1))
+
+myroot <- list(name = "宏观经济指标",children = namedf1[newnameIndex,])
+
+diagonalNetwork(namenest(myroot),width = 1000,height = 2000,opacity = 0.9,fontSize = 16)
+```
+
+## 3. PCA主成分分析
+```{r echo= FALSE}
+pcadata <- submc[,newnameIndex+2]
+cormat <- cor(pcadata,use = "pairwise.complete.obs")
+e <- eigen(cormat)
+
+
+
+
+```
+
+
+
+
+##5 股票时段-宏观经济数据分类器
+
+
+##6 分析股票时段切换的前兆信号
+
 
 
 
