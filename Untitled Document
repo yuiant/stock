@@ -75,15 +75,6 @@ submc$date <- as.POSIXct(submc$date)
 dname <- do.call(rbind,strsplit(unlist(namejson),split = "-"))
 
 d2nameindex <- unique(paste(dname[,1],dname[,2],sep = "-"))
-
-Normalize <- function(x){
-    (x-min(x,na.rm = T))/(max(x,na.rm = T)-min(x,na.rm = T))
-}
-
-
-
-submc0 <- submc
-submc0[,-c(1:2)] <- apply(submc0[,-c(1:2)],2,FUN = Normalize) 
 ```
 
 ## 1. 概览
@@ -158,104 +149,20 @@ renderPlotly({selectp1()})
 #### Q&A
 ##### CPI
 ###### 为何1993-1994年CPI那么高？
-
 - 92年邓小平南巡讲话，掀起投资热。银行监管力度欠缺，坏账率高。导致市场积累大量货币，引起高通胀。海南房产泡沫，苏三山事件等。
 - 朱镕基要把钱收回来，存款利率和贷款利率一度拉高。
-
+------------
 ###### 为何cpi有周期性,从1999年开始大概3年为一个周期?
-
 - unknown
 
 #####  国家财政-收支
-
 - 财政收入结构：税收收入、国有资产收益、国债收入、收费收入、其他收入
 - 财政支出结构：结构略
 
 ###### 财政支出随着财政收入增长？
-
 - 社会发展使然。支出和收入两者互为积极作用。
-- todo???
-
-###### 财政收入占GDP为何一直上升?与赤字率有什么关系？
-- 税收增多了
-- todo???
-
-
+- 
 ##### 税收
-
-###### 增值税 > 企业所得税 > 营业税 > 消费税 > 关税
-
-- todo?
-
-##### GDP季度累计（季度）
-
-- 第一产业：农林牧渔
-- 第二产业：采矿、制造、电力、燃气、水、供应业、建筑业
-- 第三产业：其他
-
-###### 增加值：第三产业 >= 第二产业 > 第一产业
-
-- 时代格局，时代命题，科技发展...
-- todo?
-
-###### 同比增长：三产业曲线形状相似，说明什么规律
-
-- todo???
-
-##### GDP结构
-
-- 城镇 > 政府 > 农村
-- 固定资本形成总额 >> 存货增加
-
-
-##### 城镇居民收入与物价信心
-###### 与房价的关系
-
-- todo??
-
-###### 2008-2009年有跳跃点
-
-- 08年金融危机
-- todo??
-
-##### 制造业PMI
-
-- 50为荣枯分水岭
-
-###### 08年有谷底
-
-- 金融危机
-- todo ??
-
-##### 非制造业PMI
-
-- PMI在55徘徊
-- PMI与商务活动指数重合??
-
-##### 货币供应量
-
-- M0，流通中的现金，指单位库存现金和居民手持现金之和，其中“单位”指银行体系以外的企业、机关、团体、部队、学校等单位。
-- M1，狭义货币供应量，指M0加上单位在银行的可开支票进行支付的活期存款。M0+企业活期存款+机关团体部队存款+农村存款+个人持有的信用卡类存款广义货币供应量
-- M2，指M1加上单位在银行的定期存款和城乡居民个人在银行的各项储蓄存款以及证券公司的客户保证金。M1+城乡居民储蓄存款+企业存款中具有定期性质的存款+外币存款+信托类存款
-- M2 = M1+准备货币
-- M2 > 准货币 > 储蓄存款 > M1 > 活期存款 > 定期存款 > 其他存款 > M0 
-
-##### 存款利率
-
-- 基本重合
-- 93-95年峰值(cpi)
-
-
-##### 贷款利率
-
-- 基本重合
-- 93-95年峰值(cpi)
-
-
-##### 央行黄金
-
-- 国家外汇储蓄 >> 黄金储蓄
-- 14年峰值后下降，近两年外汇储蓄逐渐下降。
 
 
 
@@ -283,7 +190,14 @@ cdf <- data.frame(cor = corvalue, name = cname,id1 = cm[1,],id2 = cm[2,])
 cdf90 <- filter(cdf,abs(cor) >= 0.9)
 cdf90 <- cdf90[order(cdf90$cor,decreasing = T),]
 
-
+Normalize <- function(x,b){
+  if(b == TRUE){
+    (x-min(x))/(max(x)-min(x))
+  }
+  else{
+    x
+  }
+}
 
 
 
@@ -312,10 +226,7 @@ renderPlotly(selectp2())
 
 ```
 
-#### 说明
 
-- 相关系数高的指标 = 相关性高？
-- 重新定义相关性？事件传播的逻辑链：链长（深度），时间，速度
 
 ### 2.3 指标确定
 - 剔除冗余指标(人工判定)
@@ -338,8 +249,8 @@ myroot <- list(name = "宏观经济指标",children = namedf1[newnameIndex,])
 diagonalNetwork(namenest(myroot),width = 1000,height = 2000,opacity = 0.9,fontSize = 16)
 ```
 
-## 3. 分析
-### 3.1 PCA图表数据
+## 3. PCA主成分分析
+### 3.1 图表数据
 ```{r echo= FALSE}
 pcachoise <- c("非lag指标","lag指标","全部指标")
 pcalist <- list(notlagIndex,lagIndex,newnameIndex)
@@ -352,7 +263,7 @@ inputPanel(
 selectpca <- reactive({
   res <- list()
   myindex <- pcalist[[which(pcachoise == input$selectpca,arr.ind = T)]]
-  pcadata <- submc0[,myindex+2]
+  pcadata <- submc[,myindex+2]
   cormat <- cor(pcadata,use = "pairwise.complete.obs")
   e <- eigen(cormat)
   evalue <- e$values
@@ -404,41 +315,9 @@ DT::renderDataTable(selectpca()$mydf,rownames = FALSE,options = list(pageLength 
 
 
 
-### 3.3 股票时段-宏观经济数据分类器
+##4 股票时段-宏观经济数据分类器
 
-#### 取累计方差贡献率>99%的主成分
 ```{r echo= FALSE}
-
-notlagdata <- submc0[,c(1,2,notlagIndex+2)]
-
-
-pcadata <- notlagdata[,-c(1:2)]
-cormat <- cor(pcadata,use = "pairwise.complete.obs")
-e <- eigen(cormat)
-evalue <- e$values
-evalue[which(evalue < 0)] <- min(evalue[which(evalue >= 0)])
-e$values <- evalue
-  
-spercent <- 99
-varcumsum <- cumsum(e$values)/sum(e$values)
-minpcax <- min(which(varcumsum >= spercent/100,arr.ind = T))
-
-dc <- ncol(pcadata)
-dr <- nrow(pcadata)
-pm <- c(as.matrix(pcadata))
-pm[which(is.na(pm))] <- -0.0001
-pcadata1 <- matrix(pm,nrow = dr,ncol = dc)
-
-newpcadata <- pcadata1 %*% e$vectors[,1:minpcax]
-newsubmc <- data.frame(cbind(notlagdata[,2],newpcadata))
-names(newsubmc) <- c("p",paste("Com",1:minpcax,sep = ""))
-
-library(C50)
-library(caret)
-
-
-
-
 
 
 
@@ -447,7 +326,8 @@ library(caret)
 
 
 
-##4 分析股票时段切换的前兆信号
+##5 分析股票时段切换的前兆信号
+
 
 
 
