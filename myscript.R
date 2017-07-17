@@ -78,6 +78,81 @@ namenest <- function(root){
 
 
 
+notlagdata <- submc0[,c(1,2,notlagIndex+2)]
+
+lagsubdata <- submc0[,lagsubdata+2]
+lagsubdata <- lagsubdata[-nrow(lagsubdata),]
+lagsubdata <- rbind(rep())
+
+alldatawithlag
+
+pcadata <- notlagdata[,-c(1:2)]
+cormat <- cor(pcadata,use = "pairwise.complete.obs")
+e <- eigen(cormat)
+evalue <- e$values
+evalue[which(evalue < 0)] <- min(evalue[which(evalue >= 0)])
+e$values <- evalue
+
+spercent <- 99
+varcumsum <- cumsum(e$values)/sum(e$values)
+minpcax <- min(which(varcumsum >= spercent/100,arr.ind = T))
+
+dc <- ncol(pcadata)
+dr <- nrow(pcadata)
+pm <- c(as.matrix(pcadata))
+pm[which(is.na(pm))] <- -0.0001
+pcadata1 <- matrix(pm,nrow = dr,ncol = dc)
+
+newpcadata <- pcadata1 %*% e$vectors[,1:minpcax]
+newsubmc <- data.frame(cbind(notlagdata[,2],newpcadata))
+names(newsubmc) <- c("p",paste("Com",1:minpcax,sep = ""))
+
+library(C50)
+library(caret)
+
+
+
+
+
+
+
+
+newsubmc1 <- notlagdata[,-1]
+names(newsubmc1)[1] <- "p"
+newsubmc1$p[which(newsubmc1$p == 2)] <- 0
+newsubmc1$p <- as.factor(newsubmc1$p)
+
+a <- lapply(1:100,FUN = function(xxx){
+  set.seed(round(runif(n = 1,min = 1,max = 10000)))
+  folds <- createFolds(y = newsubmc1$p,k = 10)
+  res <- lapply(folds,FUN = function(fd){
+    trainset <- newsubmc1[-fd,]
+    
+    testset <- newsubmc1[fd,]
+    
+    model <- C5.0(x = trainset[,-1],y = trainset[,1])
+    pred <- predict(model,newdata = testset[,-1])
+    predtt <- table(pred,testset$p)
+    accuracy <- (predtt[1,1]+predtt[2,2])/(sum(predtt))
+  })
+  res <- unlist(res)
+})
+
+folds <- createFolds(y = newsubmc1$p,k = 10)
+res <- lapply(folds,FUN = function(fd){
+  trainset <- newsubmc1[-fd,]
+  
+  testset <- newsubmc1[fd,]
+  
+  model <- C5.0(x = trainset[,-1],y = trainset[,1])
+  pred <- predict(model,newdata = testset[,-1])
+  predtt <- table(pred,testset$p)
+  accuracy <- (predtt[1,1]+predtt[2,2])/(sum(predtt))
+})
+
+
+
+
 
 
 
