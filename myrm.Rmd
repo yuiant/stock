@@ -56,12 +56,12 @@ mc_ind <- read.csv("macro_indicator_new.csv",fileEncoding = "utf-8")
 col2rid <- read.csv("col2rid.csv",header = F)
 
 ### plot na status of the table
-xa <- rep(1:130,809)
-ya <- sort(rep(1:809,130))
-hm <- data.frame(xa,ya)
-hm$status <- as.integer(is.na(apply(hm,1,FUN = function(x){is.na(mc_ind[810-x[2],2+x[1]])})))
-txt <- paste(mc_ind$date[810-hm$ya],unlist(namejson)[hm$xa],sep = ":")
-hm$txt <- txt
+#xa <- rep(1:130,809)
+#ya <- sort(rep(1:809,130))
+#hm <- data.frame(xa,ya)
+#hm$status <- as.integer(is.na(apply(hm,1,FUN = function(x){is.na(mc_ind[810-x[2],2+x[1]])})))
+#txt <- paste(mc_ind$date[810-hm$ya],unlist(namejson)[hm$xa],sep = ":")
+#hm$txt <- txt
 
 indexcount <- c(1,6,7,8,12,4,12,11,16,14,31,3,2,3)
 ind0 <- c(1,(cumsum(indexcount)+1)[-length(indexcount)])
@@ -411,23 +411,29 @@ DT::renderDataTable(selectpca()$mydf,rownames = FALSE,options = list(pageLength 
 ### 3.3 股票时段-宏观经济数据分类器
 
 #### 取累计方差贡献率>99%的主成分
-```{r echo= FALSE,eval=FALSE}
-
-notlagdata <- submc0[,c(1,2,notlagIndex+2)]
-
-lagsubdata <- submc0[,lagIndex+2]
-lagsubdata <- lagsubdata[-nrow(lagsubdata),]
-lagsubdata <- rbind(lagsubdata[1,],lagsubdata)
-
-alldatawithlag <- submc0
-alldatawithlag[,notlagIndex+2] <- lagsubdata
-
-notlagpcadata <- notlagdata[,-c(1:2)]
-
-mydata_notlag <- pcaintial(notlagdata)
-mydata_all <- pcaintial(alldatawithlag[,c(1:2,newnameIndex+2)])
+```{r echo= FALSE}
 
 
+library(C50)
+library(caret)
+
+
+nafill <- function(data,navalue){
+  dc <- ncol(data)
+  dr <- nrow(data)
+  pm <- c(as.matrix(data))
+  pm[which(is.na(pm))] <- navalue
+  res <- matrix(pm,nrow = dr,ncol = dc)
+  return(res)
+}
+ 
+pcaintial <- function(data){
+  res <- data[,-1]
+  names(res)[1] <- "p"
+  res$p[which(res$p == 2)] <- 0
+  res$p <- as.factor(res$p)
+  res
+}
 
 ## data 1stname = "p" 0/1,no time col
 PCAC50acc <- function(data,pca,kfolds,n){
@@ -467,91 +473,57 @@ PCAC50acc <- function(data,pca,kfolds,n){
     pred <- predict(model,newdata = valset[,-1])
     predtt <- table(pred,valset$p)
     accuracy <- (predtt[1,1]+predtt[2,2])/(sum(predtt))
+    errorindex <- fd[which(as.numeric(valset$p)-as.numeric(pred)!=0,arr.ind = T)]
+    myres <- list(accuracy,errorindex)
+    return(myres)
   })
-   unlist(res)
+   return(res)
   }) 
 }
- 
-nafill <- function(data,navalue){
-  dc <- ncol(data)
-  dr <- nrow(data)
-  pm <- c(as.matrix(data))
-  pm[which(is.na(pm))] <- navalue
-  res <- matrix(pm,nrow = dr,ncol = dc)
-  return(res)
-}
- 
-pcaintial <- function(data){
-  res <- data[,-1]
-  names(res)[1] <- "p"
-  res$p[which(res$p == 2)] <- 0
-  res$p <- as.factor(res$p)
+
+notlagdata <- submc0[,c(1,2,notlagIndex+2)]
+
+lagsubdata <- submc0[,lagIndex+2]
+lagsubdata <- lagsubdata[-nrow(lagsubdata),]
+lagsubdata <- rbind(lagsubdata[1,],lagsubdata)
+
+alldatawithlag <- submc0
+alldatawithlag[,notlagIndex+2] <- lagsubdata
+
+notlagpcadata <- notlagdata[,-c(1:2)]
+
+mydata_notlag <- pcaintial(notlagdata)
+mydata_all <- pcaintial(alldatawithlag[,c(1:2,newnameIndex+2)])
+
+mydatalist <- list(mydata_notlag,mydata_all)
+
+choosedataset <- c("notlag","all")
+
+### ui
+inputPanel(
+  selectInput(inputId = "selectmodeldata",label = "choose dataset",choices = choosedataset ),
+  checkboxInput(inputId = "ckbpca",label = "pca",value = TRUE)
+)
+
+selectmodel <- reactive({
+  res <- list()
+  ind <- which(choosedataset == input$selectmodeldata,arr.ind = T)
+  data1 <- mydatalist[[ind]]
+  pca1 <- input$ckbpca
+  reslist <- PCAC50acc(data = data1,pca = pca1,kfolds = 10,n = 100)
+  res_acc <- unlist(lapply(reslist,FUN = function(x){unlist(lapply(x,function(x1){x1[1]}))}))
+  res_errorindex <- unlist(lapply(reslist,FUN = function(x){unlist(lapply(x,function(x1){x1[2]}))}))
+  res$acc <- res_acc
+  res$errorindex <- res_errorindex
   res
-}
-
-
-cormat <- cor(pcadata,use = "pairwise.complete.obs")
-e <- eigen(cormat)
-evalue <- e$values
-evalue[which(evalue < 0)] <- min(evalue[which(evalue >= 0)])
-e$values <- evalue
-  
-spercent <- 99
-varcumsum <- cumsum(e$values)/sum(e$values)
-minpcax <- min(which(varcumsum >= spercent/100,arr.ind = T))
-
-dc <- ncol(pcadata)
-dr <- nrow(pcadata)
-pm <- c(as.matrix(pcadata))
-pm[which(is.na(pm))] <- -0.0001
-pcadata1 <- matrix(pm,nrow = dr,ncol = dc)
-
-newpcadata <- pcadata1 %*% e$vectors[,1:minpcax]
-newsubmc <- data.frame(cbind(notlagdata[,2],newpcadata))
-names(newsubmc) <- c("p",paste("Com",1:minpcax,sep = ""))
-
-library(C50)
-library(caret)
-
-
-
-
-
-
-
-
-newsubmc1 <- notlagdata[,-1]
-names(newsubmc1)[1] <- "p"
-newsubmc1$p[which(newsubmc1$p == 2)] <- 0
-newsubmc1$p <- as.factor(newsubmc1$p)
-
-a <- lapply(1:100,FUN = function(xxx){
-set.seed(round(runif(n = 1,min = 1,max = 10000)))
-folds <- createFolds(y = newsubmc1$p,k = 10)
-res <- lapply(folds,FUN = function(fd){
-  trainset <- newsubmc1[-fd,]
- 
-  testset <- newsubmc1[fd,]
-
-  model <- C5.0(x = trainset[,-1],y = trainset[,1])
-  pred <- predict(model,newdata = testset[,-1])
-  predtt <- table(pred,testset$p)
-  accuracy <- (predtt[1,1]+predtt[2,2])/(sum(predtt))
-})
- res <- unlist(res)
 })
 
-folds <- createFolds(y = newsubmc1$p,k = 10)
-res <- lapply(folds,FUN = function(fd){
-  trainset <- newsubmc1[-fd,]
- 
-  testset <- newsubmc1[fd,]
+renderPlot(hist(selectmodel()$acc))
+renderPrint(sort(table(selectmodel()$errorindex),decreasing = T))
 
-  model <- C5.0(x = trainset[,-1],y = trainset[,1])
-  pred <- predict(model,newdata = testset[,-1])
-  predtt <- table(pred,testset$p)
-  accuracy <- (predtt[1,1]+predtt[2,2])/(sum(predtt))
-})
+
+
+
 
 ```
 
