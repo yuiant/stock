@@ -41,13 +41,6 @@ namenest <- function(root){
 
 ###########
 
-
-
-
-
-
-
-
 namejson <- fromJSON(file = "id2token.json")
 
 
@@ -120,6 +113,7 @@ renderPlotly({selectp0()})
 
 ```
 
+####  Conclusion:时段tag基本合理，与大盘走势相符
 
 
 ### 1.2 宏观经济指标概览
@@ -159,108 +153,8 @@ renderPlotly({selectp1()})
 
 ```
 
-#### Q&A
-##### CPI
-###### 为何1993-1994年CPI那么高？
-
-- 92年邓小平南巡讲话，掀起投资热。银行监管力度欠缺，坏账率高。导致市场积累大量货币，引起高通胀。海南房产泡沫，苏三山事件等。
-- 朱镕基要把钱收回来，存款利率和贷款利率一度拉高。
-
-###### 为何cpi有周期性,从1999年开始大概3年为一个周期?
-
-- unknown
-
-#####  国家财政-收支
-
-- 财政收入结构：税收收入、国有资产收益、国债收入、收费收入、其他收入
-- 财政支出结构：结构略
-
-###### 财政支出随着财政收入增长？
-
-- 社会发展使然。支出和收入两者互为积极作用。
-- todo???
-
-###### 财政收入占GDP为何一直上升?与赤字率有什么关系？
-- 税收增多了
-- todo???
-
-
-##### 税收
-
-###### 增值税 > 企业所得税 > 营业税 > 消费税 > 关税
-
-- todo?
-
-##### GDP季度累计（季度）
-
-- 第一产业：农林牧渔
-- 第二产业：采矿、制造、电力、燃气、水、供应业、建筑业
-- 第三产业：其他
-
-###### 增加值：第三产业 >= 第二产业 > 第一产业
-
-- 时代格局，时代命题，科技发展...
-- todo?
-
-###### 同比增长：三产业曲线形状相似，说明什么规律
-
-- todo???
-
-##### GDP结构
-
-- 城镇 > 政府 > 农村
-- 固定资本形成总额 >> 存货增加
-
-
-##### 城镇居民收入与物价信心
-###### 与房价的关系
-
-- todo??
-
-###### 2008-2009年有跳跃点
-
-- 08年金融危机
-- todo??
-
-##### 制造业PMI
-
-- 50为荣枯分水岭
-
-###### 08年有谷底
-
-- 金融危机
-- todo ??
-
-##### 非制造业PMI
-
-- PMI在55徘徊
-- PMI与商务活动指数重合??
-
-##### 货币供应量
-
-- M0，流通中的现金，指单位库存现金和居民手持现金之和，其中“单位”指银行体系以外的企业、机关、团体、部队、学校等单位。
-- M1，狭义货币供应量，指M0加上单位在银行的可开支票进行支付的活期存款。M0+企业活期存款+机关团体部队存款+农村存款+个人持有的信用卡类存款广义货币供应量
-- M2，指M1加上单位在银行的定期存款和城乡居民个人在银行的各项储蓄存款以及证券公司的客户保证金。M1+城乡居民储蓄存款+企业存款中具有定期性质的存款+外币存款+信托类存款
-- M2 = M1+准备货币
-- M2 > 准货币 > 储蓄存款 > M1 > 活期存款 > 定期存款 > 其他存款 > M0 
-
-##### 存款利率
-
-- 基本重合
-- 93-95年峰值(cpi)
-
-
-##### 贷款利率
-
-- 基本重合
-- 93-95年峰值(cpi)
-
-
-##### 央行黄金
-
-- 国家外汇储蓄 >> 黄金储蓄
-- 14年峰值后下降，近两年外汇储蓄逐渐下降。
-
+#### 指标Q&A
+http://fromwiz.com/share/s/2l0UX32-UQVn2rG3G020PrK01UCEbS30lQtb29pyhJ30L2s2
 
 
 
@@ -317,9 +211,21 @@ renderPlotly(selectp2())
 ```
 
 #### 说明
-
-- 相关系数高的指标 = 相关性高？
-- 重新定义相关性？事件传播的逻辑链：链长（深度），时间，速度
+- 存在无意义或意义较难想象的相关性
+- 相关关系与因果关系：
+     - 你出生，你父亲在房外种一棵树，你的身高和树的身高强正相关
+     - 建立贝叶斯网 --> 人工捋清指标的因果关系 --> 数据分析+金融理论
+     - 引入贝叶斯网？：
+   
+$$
+\begin{align}
+&相关系数：&r_{AB}= \frac{Cov(A,B)}{std(A)std(B)} \\
+&因果关系：&A \rightarrow X \rightarrow B \\
+&贝叶斯链式法则：&得到P(AB) \\
+&更新：&\hat r_{AB} = P(AB)\cdot r_{AB}
+\end{align}
+$$
+    
 
 ### 2.3 指标确定
 - 剔除冗余指标(人工判定)
@@ -408,9 +314,10 @@ DT::renderDataTable(selectpca()$mydf,rownames = FALSE,options = list(pageLength 
 
 
 
+
 ### 3.3 股票时段-宏观经济数据分类器
 
-#### 取累计方差贡献率>99%的主成分
+#### 决策树
 ```{r echo= FALSE}
 
 
@@ -497,12 +404,12 @@ mydata_all <- pcaintial(alldatawithlag[,c(1:2,newnameIndex+2)])
 
 mydatalist <- list(mydata_notlag,mydata_all)
 
-choosedataset <- c("notlag","all")
+choosedataset <- c("非lag指标","全部指标")
 
 ### ui
 inputPanel(
-  selectInput(inputId = "selectmodeldata",label = "choose dataset",choices = choosedataset ),
-  checkboxInput(inputId = "ckbpca",label = "pca",value = TRUE)
+  selectInput(inputId = "selectmodeldata",label = "选择数据集",choices = choosedataset,selected = "全部指标"),
+  checkboxInput(inputId = "ckbpca",label = "pca-累计方差贡献率>99%",value = TRUE)
 )
 
 selectmodel <- reactive({
@@ -518,7 +425,11 @@ selectmodel <- reactive({
   res
 })
 
-renderPlot(hist(selectmodel()$acc))
+renderPlotly({
+  plot_ly(x = selectmodel()$acc,type = "histogram") %>%
+    layout(title = "100 times 10 folds-accuracy distribution")
+})
+
 renderPrint(sort(table(selectmodel()$errorindex),decreasing = T))
 
 
@@ -527,12 +438,14 @@ renderPrint(sort(table(selectmodel()$errorindex),decreasing = T))
 
 ```
 
-
+#### Conclusion:
+- 主成份比原始特征更合理
+- 大部分分类错误的样本均在时段分界点附近 --> 模型蛮准
 
 
 ##4 分析股票时段切换的前兆信号
-
-
+- 输出决策树中各个指标的重要性
+- 暂没分析出具体的东西，暂时搁置
 
 
 
